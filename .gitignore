@@ -5,3 +5,4 @@
 *.vtk
 *.vtu
 *.pvd
+./venv
