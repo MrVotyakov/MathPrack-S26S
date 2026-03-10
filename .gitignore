@@ -6,3 +6,7 @@
 *.vtu
 *.pvd
 ./venv
+**/.cache/*
+**/.vscode
+*.ogv
+**/build/*
