@@ -1,0 +1,15 @@
+mini_project/src/acoustic_vtu_frames_1/
+mini_project/src/acoustic_vtu_frames/
+mini_project/source_repo/
+**/__pycache__/
+**/elastic_vtu_frames*/
+mini_project/src/acoustic_vtu_frames_other_source
+mini_project/acoustic.pvsm
+**/acoustic_vtu_frames_other_source/
+macro_project/src/elastic_wave_output
+macro_project/src/plastic_zone_output
+macro_project/src/thermal_stress_output
+macro_project/3rd-party/macroproject2/build
+macro_project/3rd-party/macroproject2/results
+report
+mini_project
