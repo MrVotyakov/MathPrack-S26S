@@ -164,6 +164,7 @@ mini_project/src/acoustic_vtu_frames_other_source/
 ## Результаты
 
 В результате моделирования получаем `.vtu` файлы. Открыть их можно в `Paraview`, примеры видео моделирования можно найти на [Яндекс Диске](https://disk.360.yandex.ru/d/l9_8UlurSN1kMA)
+<img width="1727" height="971" alt="image" src="https://github.com/user-attachments/assets/3130db0e-2483-4bfd-bfb5-823c93bad3bd" />
 
 ## Запуск
 
