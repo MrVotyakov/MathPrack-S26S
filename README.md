@@ -29,8 +29,7 @@ mini_project/src/tools/convert_to_vtu_with_materials.py
 $$
 \frac{1}{\rho(x)c^2(x)}
 \frac{\partial^2 p}{\partial t^2}
-$$
--
+
 \nabla \cdot
 \left(
   \frac{1}{\rho(x)} \nabla p
