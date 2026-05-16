@@ -1,0 +1,28 @@
+{
+  "latex-workshop.latex.rootFile.useSubFile": false,
+  "latex-workshop.latex.rootFile.doNotPrompt": true,
+
+  "latex-workshop.latex.recipe.default": "make",
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "make",
+      "tools": ["make"]
+    }
+  ],
+
+  "latex-workshop.latex.tools": [
+    {
+      "name": "make",
+      "command": "make",
+      "args": [],
+      "env": {}
+    }
+  ],
+
+  "latex-workshop.latex.autoClean.run": "never",
+
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.message.error.show": true,
+  "latex-workshop.message.warning.show": false
+}

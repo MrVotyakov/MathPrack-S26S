@@ -1,0 +1,81 @@
+\section{Лабораторная работа \textnumero{}3: FEniCS}
+
+\subsection{Цель работы}
+
+Научиться ставить эллиптические краевые задачи в FEniCS
+и решать их МКЭ. Пример для расчёта~--- электрический диполь
+в плоской проводящей среде с локальной неоднородностью.
+
+\subsection{Физическая постановка}
+
+Стационарный потенциал $\phi$ в среде с переменной проводимостью
+$\lambda(\mathbf{x})$ подчиняется уравнению:
+\begin{equation}\label{eq:strong}
+  -\nabla \cdot \bigl(\lambda\,\nabla \phi\bigr) = 0,
+  \quad \mathbf{x} \in [-1, 1]^2.
+\end{equation}
+
+Электроды~--- малые окружности радиуса $0.1$ с фиксированным потенциалом:
+\begin{equation}
+  \phi\big|_{\mathbf{x}_+} = +1, \qquad \phi\big|_{\mathbf{x}_-} = -1,
+  \qquad \mathbf{x}_\pm = (\pm 0.5,\, 0).
+\end{equation}
+
+\subsubsection{Неоднородность среды}
+
+В центре области расположено слабопроводящее гауссово включение:
+\begin{equation}\label{eq:lambda}
+  \lambda(\mathbf{x}) = \frac{1}{100\,e^{-25\,|\mathbf{x}|^2} + 1}.
+\end{equation}
+При $|\mathbf{x}| \to 0$ имеем $\lambda \approx 0.01$,
+вдали~--- $\lambda \to 1$. Ширина включения~--- $\sigma = 1/\sqrt{25} = 0.2$.
+
+\subsubsection{Слабая формулировка}
+
+Интегрируя по частям, получаем вариационную форму:
+\begin{equation}\label{eq:weak}
+  \int_\Omega \lambda\,\nabla \phi \cdot \nabla v\,d\mathbf{x} = 0
+  \quad \forall\, v \in V_0.
+\end{equation}
+Неоднородность $\lambda(\mathbf{x})$ входит непосредственно в билинейную
+форму, поэтому дополнительных изменений в коде не требуется.
+
+\subsection{Реализация}
+Основная часть кода была взята из \href{https://github.com/TheEntityCircle/miniscience-4th-term/tree/master/2025/03_fenics/python}{репозитория} и адаптирована под текущую задачу.
+
+\begin{lstlisting}[language=Python, caption={Сетка, условия Дирихле и решение}]
+mesh = RectangleMesh(Point(-1, -1), Point(1, 1), 128, 128)
+V    = FunctionSpace(mesh, "Lagrange", 1)
+
+bc_plus  = DirichletBC(V, Constant( 1.0),
+    lambda x, _: (x[0]-0.5)**2 + x[1]**2 < 0.01, "pointwise")
+bc_minus = DirichletBC(V, Constant(-1.0),
+    lambda x, _: (x[0]+0.5)**2 + x[1]**2 < 0.01, "pointwise")
+
+la = Expression("1/(100*exp(-25*(x[0]*x[0]+x[1]*x[1]))+1)", degree=2)
+
+u, v = Function(V), TestFunction(V)
+solve(inner(grad(u), grad(v)) * la * dx == 0, u, [bc_plus, bc_minus])
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python, caption={Поля E и j через проекцию}]
+W = VectorFunctionSpace(mesh, "Lagrange", 1)
+E = project(-grad(u),      W)
+j = project(-la * grad(u), W)
+\end{lstlisting}
+
+Результаты сохранялись в \texttt{.pvd}/\texttt{.vtu} для ParaView.
+
+\subsection{Результаты}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{img/lab3/image.png}
+\end{figure}
+Вблизи электродов поле имеет ожидаемую диполярную структуру. Линии
+тока $\mathbf{j}$ обтекают слабопроводящее включение~--- оно
+действует как препятствие, перенаправляя ток в обход центра.
+
+\subsection{Выводы}
+
+Реализовано МКЭ-решение задачи диполя в неоднородной среде.
+Картина поля выглядит корректно: ток огибает высокоомное включение.

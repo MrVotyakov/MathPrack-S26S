@@ -1,0 +1,123 @@
+
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian, english]{babel}
+
+
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{physics}
+\usepackage{bm}
+
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\graphicspath{{img/}}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+
+
+\usepackage{listings}
+\usepackage{lstautogobble}
+
+
+\usepackage[
+  left=2.5cm, right=2.0cm,
+  top=2.5cm,  bottom=2.5cm,
+  headheight=15pt
+]{geometry}
+
+
+\usepackage{fancyhdr}
+
+
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{font=small, labelfont=bf}
+
+
+\usepackage{enumitem}
+% \usepackage{microtype}  % несовместим с кириллическими bitmap-шрифтами
+\usepackage{parskip}
+\usepackage{titlesec}
+
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+\usepackage[
+  colorlinks=true,
+  linkcolor=MiptBlue,
+  citecolor=MiptBlue,
+  urlcolor=MiptBlue
+]{hyperref}
+
+\definecolor{MiptBlue}{RGB}{0, 82, 155}
+\definecolor{MiptDark}{RGB}{30, 30, 50}
+\definecolor{MiptAccent}{RGB}{0, 150, 214}
+\definecolor{CodeBg}{RGB}{245, 245, 250}
+\definecolor{CodeKw}{RGB}{0, 100, 180}
+\definecolor{CodeStr}{RGB}{180, 60, 0}
+\definecolor{CodeCmt}{RGB}{100, 130, 100}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{\thesection.\ \leftmark}}
+\fancyhead[R]{\small\textcolor{gray}{МФТИ, ФПМИ -- 2026}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}
+  {\Large\bfseries\color{MiptBlue}}
+  {\thesection.}{0.7em}{}
+  [\vspace{-0.3em}\rule{\linewidth}{0.6pt}]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{MiptDark}}
+  {\thesubsection.}{0.6em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{MiptDark}}
+  {\thesubsubsection.}{0.5em}{}
+
+\renewcommand{\sectionmark}[1]{\markboth{\thesection.\ #1}{}}
+\lstset{
+  backgroundcolor=\color{CodeBg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{CodeKw},
+  stringstyle=\color{CodeStr},
+  commentstyle=\itshape\color{CodeCmt},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  breaklines=true,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{gray!40},
+  tabsize=4,
+  autogobble=true,
+  showstringspaces=false,
+  captionpos=b,
+}
+
+\newtheorem{theorem}{Теорема}[section]
+\newtheorem{lemma}[theorem]{Лемма}
+\newtheorem{proposition}[theorem]{Утверждение}
+\newtheorem{corollary}[theorem]{Следствие}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Определение}
+\newtheorem{remark}[theorem]{Замечание}
+
+
+\newcommand{\TODO}[1]{\textcolor{orange}{\textbf{[TODO: #1]}}}
+\newcommand{\REF}{\textcolor{orange}{\textbf{[?]}}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\F}{\mathbb{F}}
