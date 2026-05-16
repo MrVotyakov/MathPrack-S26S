@@ -19,13 +19,13 @@ from mini_project.src.tools.preprocess import (
 BASE_DIR = Path(__file__).resolve().parent
 
 VTU_PATH = BASE_DIR.parent / "3d-models" / "head_with_materials.vtu"
-OUT_DIR = BASE_DIR / "elastic_vtu_frames_2"
+OUT_DIR = BASE_DIR / "elastic_vtu_frames_3"
 
 NUM_STEPS = 5000
-WRITE_EVERY = 20
+WRITE_EVERY = 50
 
 SOURCE_AMPLITUDE = 5.0e2
-SOURCE_FREQUENCY = 1.0
+SOURCE_FREQUENCY = 10
 PULSE_T0 = 0.8
 PULSE_TAU = 0.25
 SIGMA_FRACTION = 0.08

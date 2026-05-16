@@ -22,90 +22,105 @@ MATERIAL_ID_TO_PARAMS = {
         "rho": 0.001158,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1450000.0,
     },
     4: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
     11: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
     12: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
     21: {
         "name": "bones",
         "rho": 0.001,
         "lambda": 786000000.0,
         "mu": 1180000000.0,
+        "sound_speed": 3500000.0,
     },
     22: {
         "name": "blood",
         "rho": 0.001,
         "lambda": 239000.0,
         "mu": 500.0,
+        "sound_speed": 1570000.0,
     },
     24: {
         "name": "trachea",
         "rho": 0.002,
         "lambda": 14300000.0,
         "mu": 3570000.0,
+        "sound_speed": 1540000.0,
     },
     25: {
         "name": "aorta",
         "rho": 0.001,
         "lambda": 9210000.0,
         "mu": 190000.0,
+        "sound_speed": 1570000.0,
     },
     26: {
         "name": "veins",
         "rho": 0.001,
         "lambda": 32890000.0,
         "mu": 670000.0,
+        "sound_speed": 1570000.0,
     },
     27: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
     28: {
         "name": "blood",
         "rho": 0.001,
         "lambda": 239000.0,
         "mu": 500.0,
+        "sound_speed": 1570000.0,
     },
     29: {
         "name": "blood",
         "rho": 0.001,
         "lambda": 239000.0,
         "mu": 500.0,
+        "sound_speed": 1570000.0,
     },
     30: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
     31: {
         "name": "fat",
         "rho": 0.001158,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1450000.0,
     },
     32: {
         "name": "muscle",
         "rho": 0.001,
         "lambda": 3070000.0,
         "mu": 2050000.0,
+        "sound_speed": 1580000.0,
     },
 }
 
@@ -122,7 +137,7 @@ class HeadModel:
         MeshTags на тетраэдрах.
         Это аналог Physical Volume из Gmsh.
 
-    rho, lambda_, mu:
+    rho, lambda_, mu, sound_speed:
         DG0-поля. Одно значение на одну ячейку.
         Их можно напрямую использовать в ufl-формах.
 
@@ -136,6 +151,7 @@ class HeadModel:
     rho: fem.Function
     lambda_: fem.Function
     mu: fem.Function
+    sound_speed: fem.Function
     material: fem.Function
 
 
@@ -262,7 +278,7 @@ def create_cell_tags(
 
 
 # ---------------------------------------------------------------------
-# 4. DG0-поля rho, lambda, mu
+# 4. DG0-поля rho, lambda, mu, sound_speed
 # ---------------------------------------------------------------------
 
 def create_dg0_material_functions(
@@ -274,6 +290,7 @@ def create_dg0_material_functions(
     - rho
     - lambda_
     - mu
+    - sound_speed
     - material
 
     DG0 = Discontinuous Galerkin degree 0.
@@ -284,11 +301,13 @@ def create_dg0_material_functions(
     rho = fem.Function(Q)
     lambda_ = fem.Function(Q)
     mu = fem.Function(Q)
+    sound_speed = fem.Function(Q)
     material = fem.Function(Q)
 
     rho.name = "rho"
     lambda_.name = "lambda"
     mu.name = "mu"
+    sound_speed.name = "sound_speed"
     material.name = "material_id"
 
     dofmap = Q.dofmap
@@ -306,14 +325,16 @@ def create_dg0_material_functions(
         rho.x.array[dof] = params["rho"]
         lambda_.x.array[dof] = params["lambda"]
         mu.x.array[dof] = params["mu"]
+        sound_speed.x.array[dof] = params["sound_speed"]
         material.x.array[dof] = float(material_id)
 
     rho.x.scatter_forward()
     lambda_.x.scatter_forward()
     mu.x.scatter_forward()
+    sound_speed.x.scatter_forward()
     material.x.scatter_forward()
 
-    return rho, lambda_, mu, material
+    return rho, lambda_, mu, sound_speed, material
 
 
 # ---------------------------------------------------------------------
@@ -331,6 +352,7 @@ def load_head_model_from_vtu(vtu_path: Path | str = Path("body/mesh.vtu")) -> He
         rho = model.rho
         lambda_ = model.lambda_
         mu = model.mu
+        sound_speed = model.sound_speed
     """
     vtu_path = Path(vtu_path)
 
@@ -342,7 +364,10 @@ def load_head_model_from_vtu(vtu_path: Path | str = Path("body/mesh.vtu")) -> He
 
     cell_tags = create_cell_tags(domain, material_ids)
 
-    rho, lambda_, mu, material = create_dg0_material_functions(domain, cell_tags)
+    rho, lambda_, mu, sound_speed, material = create_dg0_material_functions(
+        domain,
+        cell_tags,
+    )
 
     return HeadModel(
         domain=domain,
@@ -350,6 +375,7 @@ def load_head_model_from_vtu(vtu_path: Path | str = Path("body/mesh.vtu")) -> He
         rho=rho,
         lambda_=lambda_,
         mu=mu,
+        sound_speed=sound_speed,
         material=material,
     )
 
@@ -400,7 +426,10 @@ def load_head_model_from_xdmf(
 
         cell_tags = xdmf.read_meshtags(domain, name="material_id")
 
-    rho, lambda_, mu, material = create_dg0_material_functions(domain, cell_tags)
+    rho, lambda_, mu, sound_speed, material = create_dg0_material_functions(
+        domain,
+        cell_tags,
+    )
 
     return HeadModel(
         domain=domain,
@@ -408,6 +437,7 @@ def load_head_model_from_xdmf(
         rho=rho,
         lambda_=lambda_,
         mu=mu,
+        sound_speed=sound_speed,
         material=material,
     )
 

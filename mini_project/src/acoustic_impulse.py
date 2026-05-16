@@ -7,7 +7,7 @@ import ufl
 from mpi4py import MPI
 from petsc4py import PETSc
 
-from dolfinx import fem, io
+from dolfinx import cpp, fem, io
 from dolfinx.fem.petsc import assemble_matrix, assemble_vector
 
 from mini_project.src.tools.preprocess import load_head_model_from_vtu
@@ -18,13 +18,12 @@ BASE_DIR = Path(__file__).resolve().parent
 VTU_PATH = BASE_DIR.parent / "3d-models" / "head_with_materials.vtu"
 
 # Папка с отдельными .vtu кадрами
-OUT_DIR = BASE_DIR / "acoustic_vtu_frames_1"
+OUT_DIR = BASE_DIR / "acoustic_vtu_frames_other_source"
 
-# Скорость звука в условных единицах.
-C0 = 1.0
-
-# Шаг по времени.
-DT = 0.1
+# Геометрия задана в миллиметрах, время - в секундах,
+# поэтому скорости звука задаются в mm/s в таблице материалов.
+DT = None
+AUTO_TIME_STEP_SAFETY = 0.25
 
 # Число шагов
 NUM_STEPS = 2000
@@ -38,14 +37,17 @@ SIGMA_FRACTION = 0.1
 # Амплитуда источника
 SOURCE_AMPLITUDE = 1.0
 
-# Частота импульсного источника в условных единицах
-SOURCE_FREQUENCY = 0.5
+# Частота импульсного источника в Hz.
+SOURCE_FREQUENCY = 1.0e6
 
-# Центр импульса по времени
-PULSE_T0 = 1.0
+# Центр оконного burst по времени.
+PULSE_T0 = 5.0 / SOURCE_FREQUENCY
 
-# Ширина импульса по времени
-PULSE_TAU = 0.35
+# Число периодов несущей внутри burst.
+PULSE_NUM_CYCLES = 5.0
+
+# Длительность burst.
+PULSE_DURATION = PULSE_NUM_CYCLES / SOURCE_FREQUENCY
 
 MAX_ALLOWED_PRESSURE = 1.0e6
 
@@ -104,18 +106,54 @@ def write_vtu_frame(comm, function, out_dir, step, time):
 
 def source_time_factor(t):
     """
-    Импульсный источник во времени:
+    Оконный ультразвуковой burst:
 
-        q(t) = sin(2*pi*f*t) * exp(-(t - t0)^2 / (2*tau^2))
+        q(t) = sin(2*pi*f*tau) * sin(pi*tau/T)^2
 
-    Это короткий волновой пакет.
+    где tau = t - t_start, а T - длительность burst.
+    До t_start и после t_start + T источник строго равен нулю.
     """
-    carrier = np.sin(2.0 * np.pi * SOURCE_FREQUENCY * t)
-    envelope = np.exp(-((t - PULSE_T0) ** 2) / (2.0 * PULSE_TAU ** 2))
+    pulse_start = PULSE_T0 - 0.5 * PULSE_DURATION
+    local_t = t - pulse_start
 
-    return carrier * envelope
+    if local_t < 0.0 or local_t > PULSE_DURATION:
+        return 0.0
+
+    carrier = np.sin(2.0 * np.pi * SOURCE_FREQUENCY * local_t)
+    window = np.sin(np.pi * local_t / PULSE_DURATION) ** 2
+
+    return carrier * window
 
 
+def estimate_time_step(domain, sound_speed):
+    """
+    Оценивает устойчивый шаг для явной акустической схемы.
+
+    Сетка в mm, sound_speed в mm/s, поэтому dt получается в секундах.
+    """
+    tdim = domain.topology.dim
+    num_local_cells = domain.topology.index_map(tdim).size_local
+    local_cells = np.arange(num_local_cells, dtype=np.int32)
+
+    h_local = cpp.mesh.h(domain._cpp_object, tdim, local_cells)
+    h_min_local = np.min(h_local) if h_local.size else np.inf
+    h_min = domain.comm.allreduce(h_min_local, op=MPI.MIN)
+
+    c_local = sound_speed.x.array
+    c_max_local = np.max(c_local) if c_local.size else 0.0
+    c_max = domain.comm.allreduce(c_max_local, op=MPI.MAX)
+
+    if not np.isfinite(h_min) or h_min <= 0.0:
+        raise RuntimeError("Failed to estimate positive cell size")
+    if not np.isfinite(c_max) or c_max <= 0.0:
+        raise RuntimeError("Failed to estimate positive sound speed")
+
+    dt = AUTO_TIME_STEP_SAFETY * h_min / c_max
+
+    if not np.isfinite(dt) or dt <= 0.0:
+        raise RuntimeError("Failed to estimate stable time step")
+
+    return dt, h_min, c_max
 
 
 def main():
@@ -145,6 +183,30 @@ def main():
     dx = ufl.dx(domain)
 
     rho = model.rho
+    sound_speed = model.sound_speed
+
+    check_array_global(comm, sound_speed.x.array, "sound_speed")
+
+    if DT is None:
+        dt, h_min, c_max = estimate_time_step(domain, sound_speed)
+    else:
+        dt = DT
+        h_min = None
+        c_max = None
+
+    if rank == 0:
+        if h_min is not None:
+            print(f"estimated h_min={h_min:.6e} mm", flush=True)
+        if c_max is not None:
+            print(f"estimated c_max={c_max:.6e} mm/s", flush=True)
+        print(f"using dt={dt:.6e} s", flush=True)
+        print(f"source frequency={SOURCE_FREQUENCY:.6e} Hz", flush=True)
+        print(
+            f"pulse center={PULSE_T0:.6e} s, "
+            f"duration={PULSE_DURATION:.6e} s, "
+            f"cycles={PULSE_NUM_CYCLES:.1f}",
+            flush=True,
+        )
 
     # --------------------------------------------------------
     # Акустическое уравнение с импульсным источником:
@@ -173,7 +235,7 @@ def main():
     #         + dt^2 * M^{-1} * (q(t)F - Kp^n)
     # --------------------------------------------------------
 
-    inv_bulk_modulus = 1.0 / (rho * (C0 ** 2))
+    inv_bulk_modulus = 1.0 / (rho * (sound_speed ** 2))
     inv_density = 1.0 / rho
 
     mass_lumped_form = inv_bulk_modulus * v_test * dx
@@ -316,7 +378,7 @@ def main():
 
 
     for step in range(1, NUM_STEPS + 1):
-        t = step * DT
+        t = step * dt
 
         # Kp = K * p_n
         K.mult(p_n.x.petsc_vec, Kp)
@@ -337,7 +399,7 @@ def main():
         p_np1.x.array[:] = (
             2.0 * p_n.x.array[:]
             - p_nm1.x.array[:]
-            + (DT ** 2) * (q_t * F_array - kp_array) / mass_array
+            + (dt ** 2) * (q_t * F_array - kp_array) / mass_array
         )
 
         p_np1.x.scatter_forward()
@@ -377,7 +439,7 @@ def main():
             write_vtu_frame(comm, p_n, OUT_DIR, step, t)
 
         print(
-            f"step={step:04d}, time={t:.3f}, "
+            f"step={step:04d}, time={t:.6e}, "
             f"q(t)={q_t:.6e}, max|p|={max_p:.6e}",
             flush=True,
         )
